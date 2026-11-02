@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voltyfy | Secure Retail POS & Financial Manager</title>
+  <link rel="manifest" href="manifest.json">
+  <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyBvzgT7GxhY3ppN4Y7uO8-GRTwZEj2XMy4",
+    authDomain: "voltyfy-58594.firebaseapp.com",
+    projectId: "voltyfy-58594",
+    storageBucket: "voltyfy-58594.firebasestorage.app",
+    messagingSenderId: "593858948150",
+    appId: "1:593858948150:web:3593fa4dda83d31c6dfc97",
+    measurementId: "G-51REJ99FJF"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col antialiased">
+
+  <!-- AUTH / ACCOUNT SYSTEM OVERLAY -->
+  <div id="authOverlay" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 mb-2 border border-emerald-500/20">
+          <i data-lucide="shield-alert" class="w-6 h-6"></i>
+        </div>
+        <h2 id="authTitle" class="text-2xl font-bold text-slate-100">Welcome to Voltyfy</h2>
+        <p id="authSubtitle" class="text-xs text-slate-400">Secure Account Authentication & Encryption</p>
+      </div>
+
+      <!-- TAB TOGGLE (Login / Register) -->
+      <div id="authTabs" class="grid grid-cols-2 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+        <button type="button" onclick="switchAuthMode('login')" id="tabLoginBtn" class="py-2 rounded-lg bg-emerald-600 text-white transition">Sign In</button>
+        <button type="button" onclick="switchAuthMode('register')" id="tabRegisterBtn" class="py-2 rounded-lg text-slate-400 hover:text-slate-200 transition">Create Account</button>
+      </div>
+
+      <!-- MAIN AUTH FORM -->
+      <form id="authForm" onsubmit="handleAuthFormSubmit(event)" class="space-y-4">
+        <!-- Name (Only for Register) -->
+        <div id="fieldFullName" class="hidden">
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Full Name / Store Owner</label>
+          <input type="text" id="regFullName" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-100 focus:outline-none focus:border-emerald-500 transition text-sm" placeholder="e.g., Jonathan Joshua">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Email Address</label>
+          <input type="email" id="authEmail" autocomplete="email" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-100 focus:outline-none focus:border-emerald-500 transition text-sm" placeholder="name@business.com">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Password</label>
+          <div class="relative">
+            <input type="password" id="authPassword" autocomplete="current-password" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-100 focus:outline-none focus:border-emerald-500 transition text-sm pr-10" placeholder="At least 8 characters...">
+            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-3.5 text-slate-500 hover:text-slate-300">
+              <i data-lucide="eye" id="eyeIcon" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Password Strength (Shows on Register) -->
+        <div id="passwordStrengthBox" class="hidden space-y-1">
+          <div class="flex justify-between text-[10px] text-slate-400">
+            <span>Password Strength:</span>
+            <span id="strengthLabel" class="font-bold">Weak</span>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+            <div id="strengthBar" class="h-full w-0 bg-red-500 transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <div id="authError" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/20 p-2.5 rounded-lg flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+          <span id="authErrorMsg">Invalid credentials.</span>
+        </div>
+
+        <button type="submit" id="authSubmitBtn" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm rounded-lg shadow-lg shadow-emerald-900/30 transition flex items-center justify-center gap-2">
+          <i data-lucide="log-in" id="authBtnIcon" class="w-4 h-4"></i>
+          <span id="authBtnText">Sign In to Voltyfy</span>
+        </button>
+      </form>
+
+      <!-- Forgot Password Link -->
+      <div class="flex justify-between items-center text-xs pt-2 border-t border-slate-800">
+        <button type="button" onclick="openForgotPasswordModal()" class="text-emerald-400 hover:underline">Forgot Password?</button>
+        <span class="text-slate-500">AES-256 Secured</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASSWORD RECOVERY MODAL -->
+  <div id="forgotModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-sm text-slate-100 flex items-center gap-2">
+          <i data-lucide="key-round" class="w-4 h-4 text-emerald-400"></i> Reset Password
+        </h3>
+        <button onclick="closeForgotPasswordModal()" class="text-slate-400 hover:text-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <form onsubmit="handlePasswordReset(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Registered Account Email</label>
+          <input type="email" id="resetEmail" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100" placeholder="name@business.com">
+        </div>
+        <div id="resetError" class="hidden text-xs text-red-400 font-medium"></div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeForgotPasswordModal()" class="px-3 py-2 bg-slate-800 text-xs text-slate-300 rounded-lg">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-semibold rounded-lg">Send Reset Link</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN APP WRAPPER -->
+  <div id="appContent" class="hidden flex-1 flex flex-col min-h-screen">
+    <!-- TOP NAVIGATION HEADER -->
+    <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <i data-lucide="store" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h1 class="font-bold text-sm text-slate-100" id="headerStoreName">Voltyfy Retail</h1>
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1 text-[10px] text-emerald-400">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> <span id="currentUserDisplay">Account Secure</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Desktop Navigation -->
+          <nav class="hidden md:flex items-center gap-1">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn active">
+              <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+            </button>
+            <button onclick="switchTab('pos')" id="nav-pos" class="nav-btn">
+              <i data-lucide="shopping-cart" class="w-4 h-4"></i> POS Counter
+            </button>
+            <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn">
+              <i data-lucide="package" class="w-4 h-4"></i> Catalog & Inventory
+            </button>
+            <button onclick="switchTab('history')" id="nav-history" class="nav-btn">
+              <i data-lucide="receipt" class="w-4 h-4"></i> Sales History
+            </button>
+            <button onclick="switchTab('achievements')" id="nav-achievements" class="nav-btn">
+              <i data-lucide="award" class="w-4 h-4"></i> Achievements
+            </button>
+            <button onclick="switchTab('profile')" id="nav-profile" class="nav-btn">
+              <i data-lucide="settings" class="w-4 h-4"></i> Profile & Security
+            </button>
+          </nav>
+
+          <!-- Quick Action Lock Button -->
+          <div class="flex items-center gap-2">
+            <button onclick="lockVault()" class="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition" title="Sign Out">
+              <i data-lucide="log-out" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Navigation Bar -->
+      <div class="md:hidden flex overflow-x-auto border-t border-slate-800/80 px-2 py-1 gap-1">
+        <button onclick="switchTab('dashboard')" id="mob-nav-dashboard" class="mob-nav-btn active">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+        </button>
+        <button onclick="switchTab('pos')" id="mob-nav-pos" class="mob-nav-btn">
+          <i data-lucide="shopping-cart" class="w-4 h-4"></i> POS
+        </button>
+        <button onclick="switchTab('inventory')" id="mob-nav-inventory" class="mob-nav-btn">
+          <i data-lucide="package" class="w-4 h-4"></i> Inventory
+        </button>
+        <button onclick="switchTab('history')" id="mob-nav-history" class="mob-nav-btn">
+          <i data-lucide="receipt" class="w-4 h-4"></i> History
+        </button>
+        <button onclick="switchTab('achievements')" id="mob-nav-achievements" class="mob-nav-btn">
+          <i data-lucide="award" class="w-4 h-4"></i> Milestones
+        </button>
+        <button onclick="switchTab('profile')" id="mob-nav-profile" class="mob-nav-btn">
+          <i data-lucide="settings" class="w-4 h-4"></i> Profile
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN BODY CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+      <!-- ================= 1. DASHBOARD SCREEN ================= -->
+      <section id="tab-dashboard" class="tab-screen space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-slate-800/50 border border-slate-700/60 rounded-xl p-4 flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-xs text-slate-400 uppercase font-semibold">Today's Sales</p>
+                <h3 id="dashTodaySales" class="text-2xl font-bold text-slate-100 mt-1">₦0.00</h3>
+              </div>
+              <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
+                <i data-lucide="trending-up" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-3"><span id="salesCountText">0 transactions recorded</span></p>
+          </div>
+
+          <div class="bg-slate-800/50 border border-slate-700/60 rounded-xl p-4 flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-xs text-slate-400 uppercase font-semibold">Today's Expenses</p>
+                <h3 id="dashTodayExpenses" class="text-2xl font-bold text-slate-100 mt-1">₦0.00</h3>
+              </div>
+              <div class="p-2.5 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/20">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <button onclick="openExpenseModal()" class="text-[11px] text-amber-400 hover:underline mt-3 text-left">+ Add Store Expense</button>
+          </div>
+
+          <div class="bg-slate-800/50 border border-slate-700/60 rounded-xl p-4 flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-xs text-slate-400 uppercase font-semibold">Net Gain / Profit</p>
+                <h3 id="dashTodayProfit" class="text-2xl font-bold text-emerald-400 mt-1">₦0.00</h3>
+              </div>
+              <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
+                <i data-lucide="badge-dollar-sign" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-3">COGS & Operational expenses deducted</p>
+          </div>
+
+          <div class="bg-slate-800/50 border border-slate-700/60 rounded-xl p-4 flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-xs text-slate-400 uppercase font-semibold">Net Profit Margin</p>
+                <h3 id="dashProfitMargin" class="text-2xl font-bold text-slate-100 mt-1">0.0%</h3>
+              </div>
+              <div class="p-2.5 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20">
+                <i data-lucide="percent" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-3">Target: > 20% Net Margin</p>
+          </div>
+        </div>
+
+        <!-- Analytical Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-slate-800/40 border border-slate-700/60 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-slate-200 text-sm flex items-center gap-2">
+                <i data-lucide="bar-chart-3" class="w-4 h-4 text-emerald-400"></i> Revenue vs Expenses Trend
+              </h3>
+            </div>
+            <div class="h-64 relative"><canvas id="revenueTrendChart"></canvas></div>
+          </div>
+
+          <div class="bg-slate-800/40 border border-slate-700/60 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-slate-200 text-sm flex items-center gap-2">
+                <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i> Category Breakdown
+              </h3>
+            </div>
+            <div class="h-64 relative flex items-center justify-center"><canvas id="categoryPieChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. POS COUNTER SCREEN ================= -->
+      <section id="tab-pos" class="tab-screen hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 space-y-4">
+            <div class="flex flex-col sm:flex-row gap-3 justify-between items-center bg-slate-800/40 p-4 border border-slate-700/60 rounded-xl">
+              <div class="relative w-full sm:w-72">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+                <input type="text" id="posSearch" oninput="renderPosCatalog()" placeholder="Search goods or barcodes..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+              </div>
+              <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto" id="posCategoryFilters"></div>
+            </div>
+            <div id="posCatalogGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+          </div>
+
+          <div class="bg-slate-800/50 border border-slate-700/60 rounded-xl p-5 flex flex-col justify-between h-fit sticky top-20">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-slate-700/60 mb-4">
+                <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                  <i data-lucide="shopping-bag" class="w-4 h-4 text-emerald-400"></i> Checkout Cart
+                </h3>
+                <button onclick="clearCart()" class="text-xs text-red-400 hover:underline">Clear All</button>
+              </div>
+              <div id="posCartItems" class="space-y-3 max-h-80 overflow-y-auto pr-1 divide-y divide-slate-800">
+                <p class="text-xs text-slate-500 text-center py-8">Cart is empty. Tap items on the left to add.</p>
+              </div>
+            </div>
+
+            <div class="border-t border-slate-700/60 pt-4 mt-6 space-y-3">
+              <div class="flex justify-between text-xs text-slate-400"><span>Total Items:</span><span id="posCartCount" class="font-bold text-slate-200">0</span></div>
+              <div class="flex justify-between text-xs text-slate-400"><span>Est. Cost (COGS):</span><span id="posCartCogs" class="font-semibold text-slate-300">₦0.00</span></div>
+              <div class="flex justify-between text-xs text-slate-400"><span>Est. Net Profit:</span><span id="posCartProfit" class="font-semibold text-emerald-400">₦0.00</span></div>
+              <div class="flex justify-between text-base font-bold text-slate-100 pt-2 border-t border-slate-800"><span>Total Due:</span><span id="posCartTotal" class="text-emerald-400">₦0.00</span></div>
+              <button onclick="checkoutCart()" id="btnCheckout" disabled class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-semibold text-sm rounded-lg transition flex items-center justify-center gap-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i> Complete & Record Sale
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 3. INVENTORY CATALOG SCREEN ================= -->
+      <section id="tab-inventory" class="tab-screen hidden space-y-6">
+        <div class="flex justify-between items-center bg-slate-800/40 p-4 border border-slate-700/60 rounded-xl">
+          <div>
+            <h2 class="font-bold text-base text-slate-100">Product Catalog & Pricing Matrix</h2>
+            <p class="text-xs text-slate-400">Manage bundle sizes and piece vs bundle selling prices.</p>
+          </div>
+          <button onclick="openProductModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Product
+          </button>
+        </div>
+        <div class="bg-slate-800/40 border border-slate-700/60 rounded-xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/80 text-slate-400 uppercase font-semibold border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Product Name</th><th class="p-3">Category</th><th class="p-3">Cost Price</th><th class="p-3">Piece Price</th><th class="p-3">Bundle Ratio</th><th class="p-3">Bundle Price</th><th class="p-3">Stock</th><th class="p-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryTableBody" class="divide-y divide-slate-800"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 4. SALES HISTORY SCREEN ================= -->
+      <section id="tab-history" class="tab-screen hidden space-y-6">
+        <div class="flex justify-between items-center bg-slate-800/40 p-4 border border-slate-700/60 rounded-xl">
+          <div>
+            <h2 class="font-bold text-base text-slate-100">Sales Audit Trail & Grand Totals</h2>
+            <p class="text-xs text-slate-400">Itemized logs with live automatic summation footer.</p>
+          </div>
+          <button onclick="exportSalesCSV()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 font-medium rounded-lg flex items-center gap-2">
+            <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+          </button>
+        </div>
+        <div class="bg-slate-800/40 border border-slate-700/60 rounded-xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/80 text-slate-400 uppercase font-semibold border-b border-slate-800">
+                <tr><th class="p-3">Tx ID</th><th class="p-3">Date & Time</th><th class="p-3">Items</th><th class="p-3">Total Sale</th><th class="p-3">Total Cost</th><th class="p-3">Net Profit</th></tr>
+              </thead>
+              <tbody id="historyTableBody" class="divide-y divide-slate-800"></tbody>
+              <!-- AUTOMATIC SUMMATION FOOTER ROW -->
+              <tfoot id="historyTableFoot" class="bg-slate-950 font-bold border-t-2 border-slate-700 text-slate-100">
+                <!-- Dynamically injected totals -->
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 5. ACHIEVEMENTS & AUDIT LOGS ================= -->
+      <section id="tab-achievements" class="tab-screen hidden space-y-6">
+        <div class="bg-slate-800/40 border border-slate-700/60 rounded-xl p-5">
+          <h2 class="font-bold text-base text-slate-100 mb-1">Milestones & Growth</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4" id="achievementsGrid"></div>
+        </div>
+      </section>
+
+      <!-- ================= 6. PROFILE & SETTINGS ================= -->
+      <section id="tab-profile" class="tab-screen hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-slate-800/40 border border-slate-700/60 rounded-xl p-5 space-y-4">
+            <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2"><i data-lucide="store" class="w-4 h-4 text-emerald-400"></i> Store Profile</h3>
+            <div><label class="block text-xs text-slate-400 mb-1">Store Name</label><input type="text" id="cfgStoreName" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200"></div>
+            <div><label class="block text-xs text-slate-400 mb-1">Currency Symbol</label><input type="text" id="cfgCurrency" value="₦" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200"></div>
+            <button onclick="saveStoreSettings()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-lg">Save Settings</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  <div id="productModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-lg w-full space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3"><h3 class="font-bold text-sm text-slate-100" id="productModalTitle">Add Product</h3><button onclick="closeProductModal()" class="text-slate-400"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+      <form id="productForm" onsubmit="handleProductSubmit(event)" class="space-y-3">
+        <input type="hidden" id="prodId">
+        <div><label class="block text-xs text-slate-400 mb-1">Name</label><input type="text" id="prodName" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-100"></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs text-slate-400 mb-1">Category</label><input type="text" id="prodCategory" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-100"></div>
+          <div><label class="block text-xs text-slate-400 mb-1">Stock (Pieces)</label><input type="number" id="prodStock" required min="0" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-100"></div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div><label class="block text-xs text-slate-400 mb-1">Cost Price</label><input type="number" id="prodCostPrice" step="0.01" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-100"></div>
+          <div><label class="block text-xs text-slate-400 mb-1">Piece Price</label><input type="number" id="prodPiecePrice" step="0.01" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-100"></div>
+          <div><label class="block text-xs text-slate-400 mb-1">Bundle Size</label><input type="number" id="prodBundleSize" min="1" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-100"></div>
+        </div>
+        <div><label class="block text-xs text-slate-400 mb-1">Bundle Price</label><input type="number" id="prodBundlePrice" step="0.01" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-100"></div>
+        <div class="pt-3 flex justify-end gap-2"><button type="button" onclick="closeProductModal()" class="px-4 py-2 bg-slate-800 text-xs text-slate-300 rounded-lg">Cancel</button><button type="submit" class="px-4 py-2 bg-emerald-600 text-xs text-white font-semibold rounded-lg">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="expenseModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-sm w-full space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3"><h3 class="font-bold text-sm text-slate-100">Add Expense</h3><button onclick="closeExpenseModal()" class="text-slate-400"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+      <form onsubmit="handleExpenseSubmit(event)" class="space-y-3">
+        <div><label class="block text-xs text-slate-400 mb-1">Description</label><input type="text" id="expDesc" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-100"></div>
+        <div><label class="block text-xs text-slate-400 mb-1">Amount (₦)</label><input type="number" id="expAmount" step="0.01" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-100"></div>
+        <div class="pt-3 flex justify-end gap-2"><button type="button" onclick="closeExpenseModal()" class="px-4 py-2 bg-slate-800 text-xs text-slate-300 rounded-lg">Cancel</button><button type="submit" class="px-4 py-2 bg-amber-600 text-xs text-white font-semibold rounded-lg">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT ENGINE WITH ACCOUNT AUTH & ENCRYPTION -->
+  <script>
+    let currentAuthMode = 'login';
+    let currentUserEmail = null;
+    let storeState = {
+      settings: { storeName: "Voltyfy Retail", currency: "₦" },
+      inventory: [
+        { id: "p1", name: "Coca-Cola 50cl", category: "Beverages", costPrice: 150, piecePrice: 250, bundleSize: 12, bundlePrice: 2700, stock: 120 },
+        { id: "p2", name: "Golden Penny Rice 1kg", category: "Groceries", costPrice: 1100, piecePrice: 1500, bundleSize: 10, bundlePrice: 14000, stock: 50 },
+        { id: "p3", name: "Eva Water 75cl", category: "Beverages", costPrice: 80, piecePrice: 150, bundleSize: 12, bundlePrice: 1500, stock: 200 }
+      ],
+      sales: [],
+      expenses: []
+    };
+    let cart = [];
+    let activePosCategory = "All";
+    let trendChartInstance = null;
+    let pieChartInstance = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      document.getElementById("authPassword").addEventListener("input", (e) => {
+        if (currentAuthMode === 'register') evaluatePasswordStrength(e.target.value);
+      });
+    });
+
+    function switchAuthMode(mode) {
+      currentAuthMode = mode;
+      const title = document.getElementById("authTitle");
+      const sub = document.getElementById("authSubtitle");
+      const btnText = document.getElementById("authBtnText");
+      const btnLogin = document.getElementById("tabLoginBtn");
+      const btnReg = document.getElementById("tabRegisterBtn");
+      const fieldName = document.getElementById("fieldFullName");
+      const strengthBox = document.getElementById("passwordStrengthBox");
+
+      if (mode === 'login') {
+        title.innerText = "Welcome to Voltyfy";
+        sub.innerText = "Sign in to access your secure retail dashboard.";
+        btnText.innerText = "Sign In to Voltyfy";
+        btnLogin.className = "py-2 rounded-lg bg-emerald-600 text-white transition";
+        btnReg.className = "py-2 rounded-lg text-slate-400 hover:text-slate-200 transition";
+        fieldName.classList.add("hidden");
+        strengthBox.classList.add("hidden");
+      } else {
+        title.innerText = "Create Voltyfy Account";
+        sub.innerText = "Set up your credentials.";
+        btnText.innerText = "Register Account";
+        btnReg.className = "py-2 rounded-lg bg-emerald-600 text-white transition";
+        btnLogin.className = "py-2 rounded-lg text-slate-400 hover:text-slate-200 transition";
+        fieldName.classList.remove("hidden");
+        strengthBox.classList.remove("hidden");
+      }
+    }
+
+    function evaluatePasswordStrength(pwd) {
+      const bar = document.getElementById("strengthBar");
+      const label = document.getElementById("strengthLabel");
+      let score = 0;
+      if (pwd.length >= 8) score++;
+      if (/[A-Z]/.test(pwd)) score++;
+      if (/[0-9]/.test(pwd)) score++;
+      if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+      const levels = [
+        { label: "Weak", color: "bg-red-500", width: "25%" },
+        { label: "Fair", color: "bg-amber-500", width: "50%" },
+        { label: "Good", color: "bg-blue-500", width: "75%" },
+        { label: "Strong", color: "bg-emerald-500", width: "100%" }
+      ];
+      const cur = levels[Math.max(0, score - 1)];
+      bar.className = `h-full transition-all duration-300 ${cur.color}`;
+      bar.style.width = cur.width;
+      label.innerText = cur.label;
+    }
+
+    function handleAuthFormSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById("authEmail").value.trim().toLowerCase();
+      const password = document.getElementById("authPassword").value;
+      const errorBox = document.getElementById("authError");
+      const errorMsg = document.getElementById("authErrorMsg");
+
+      let accounts = JSON.parse(localStorage.getItem("voltyfy_accounts") || "{}");
+
+      if (currentAuthMode === 'register') {
+        if (password.length < 8) {
+          errorMsg.innerText = "Password must be at least 8 characters.";
+          errorBox.classList.remove("hidden");
+          return;
+        }
+        if (accounts[email]) {
+          errorMsg.innerText = "An account with this email already exists. Please sign in.";
+          errorBox.classList.remove("hidden");
+          return;
+        }
+
+        accounts[email] = { password, data: storeState };
+        localStorage.setItem("voltyfy_accounts", JSON.stringify(accounts));
+        alert("Account created successfully! You can now sign in.");
+        switchAuthMode('login');
+        errorBox.classList.add("hidden");
+        return;
+      }
+
+      if (!accounts[email] || accounts[email].password !== password) {
+        errorMsg.innerText = "Invalid email or password.";
+        errorBox.classList.remove("hidden");
+        return;
+      }
+
+      currentUserEmail = email;
+      storeState = accounts[email].data;
+      document.getElementById("authOverlay").classList.add("hidden");
+      document.getElementById("appContent").classList.remove("hidden");
+      document.getElementById("currentUserDisplay").innerText = email;
+      initAppViews();
+    }
+
+    function openForgotPasswordModal() {
+      document.getElementById("forgotModal").classList.remove("hidden");
+      document.getElementById("forgotModal").classList.add("flex");
+    }
+    function closeForgotPasswordModal() {
+      document.getElementById("forgotModal").classList.add("hidden");
+      document.getElementById("forgotModal").classList.remove("flex");
+    }
+
+    function handlePasswordReset(e) {
+      e.preventDefault();
+      const email = document.getElementById("resetEmail").value.trim().toLowerCase();
+      const errBox = document.getElementById("resetError");
+
+      let accounts = JSON.parse(localStorage.getItem("voltyfy_accounts") || "{}");
+      if (!accounts[email]) {
+        errBox.innerText = "No account found with this email address.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+
+      alert(`Password reset instructions sent to ${email}.`);
+      closeForgotPasswordModal();
+    }
+
+    function lockVault() {
+      saveCurrentAccountData();
+      currentUserEmail = null;
+      document.getElementById("appContent").classList.add("hidden");
+      document.getElementById("authOverlay").classList.remove("hidden");
+      document.getElementById("authPassword").value = "";
+    }
+
+    function saveCurrentAccountData() {
+      if (!currentUserEmail) return;
+      let accounts = JSON.parse(localStorage.getItem("voltyfy_accounts") || "{}");
+      if (accounts[currentUserEmail]) {
+        accounts[currentUserEmail].data = storeState;
+        localStorage.setItem("voltyfy_accounts", JSON.stringify(accounts));
+      }
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-screen").forEach(el => el.classList.add("hidden"));
+      document.querySelectorAll(".nav-btn, .mob-nav-btn").forEach(el => el.classList.remove("active"));
+      document.getElementById(`tab-${tabId}`).classList.remove("hidden");
+      const desktopNav = document.getElementById(`nav-${tabId}`);
+      const mobNav = document.getElementById(`mob-nav-${tabId}`);
+      if (desktopNav) desktopNav.classList.add("active");
+      if (mobNav) mobNav.classList.add("active");
+
+      if (tabId === 'dashboard') renderDashboard();
+      if (tabId === 'pos') renderPosCatalog();
+      if (tabId === 'inventory') renderInventoryTable();
+      if (tabId === 'history') renderSalesHistory();
+      if (tabId === 'achievements') renderAchievements();
+      if (tabId === 'profile') loadProfileSettings();
+    }
+
+    function initAppViews() {
+      document.getElementById("headerStoreName").innerText = storeState.settings.storeName;
+      switchTab('dashboard');
+    }
+
+    function renderDashboard() {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const todaySales = storeState.sales.filter(s => s.timestamp.startsWith(todayStr));
+      const todayExp = storeState.expenses.filter(e => e.timestamp.startsWith(todayStr));
+
+      const totalSales = todaySales.reduce((sum, s) => sum + s.totalAmount, 0);
+      const totalCogs = todaySales.reduce((sum, s) => sum + s.totalCogs, 0);
+      const totalExpenses = todayExp.reduce((sum, e) => sum + e.amount, 0);
+      const netProfit = totalSales - totalCogs - totalExpenses;
+      const margin = totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(1) : "0.0";
+      const curr = storeState.settings.currency;
+
+      document.getElementById("dashTodaySales").innerText = `${curr}${totalSales.toLocaleString()}`;
+      document.getElementById("dashTodayExpenses").innerText = `${curr}${totalExpenses.toLocaleString()}`;
+      document.getElementById("dashTodayProfit").innerText = `${curr}${netProfit.toLocaleString()}`;
+      document.getElementById("dashProfitMargin").innerText = `${margin}%`;
+      document.getElementById("salesCountText").innerText = `${todaySales.length} transaction(s) today`;
+
+      renderDashboardCharts();
+    }
+
+    function renderDashboardCharts() {
+      const ctxTrend = document.getElementById("revenueTrendChart").getContext("2d");
+      if (trendChartInstance) trendChartInstance.destroy();
+      const dates = [...Array(7)].map((_, i) => {
+        const d = new Date(); d.setDate(d.getDate() - (6 - i));
+        return d.toISOString().split("T")[0];
+      });
+      const salesData = dates.map(d => storeState.sales.filter(s => s.timestamp.startsWith(d)).reduce((sum, s) => sum + s.totalAmount, 0));
+      const expData = dates.map(d => storeState.expenses.filter(e => e.timestamp.startsWith(d)).reduce((sum, e) => sum + e.amount, 0));
+
+      trendChartInstance = new Chart(ctxTrend, {
+        type: 'line',
+        data: { labels: dates.map(d => d.slice(5)), datasets: [{ label: 'Revenue', data: salesData, borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.3 }, { label: 'Expenses', data: expData, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, tension: 0.3 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8' } } } }
+      });
+
+      const ctxPie = document.getElementById("categoryPieChart").getContext("2d");
+      if (pieChartInstance) pieChartInstance.destroy();
+      const categories = {};
+      storeState.sales.forEach(s => s.items.forEach(i => categories[i.category] = (categories[i.category] || 0) + i.subtotal));
+
+      pieChartInstance = new Chart(ctxPie, {
+        type: 'doughnut',
+        data: { labels: Object.keys(categories).length ? Object.keys(categories) : ['No Data'], datasets: [{ data: Object.values(categories).length ? Object.values(categories) : [1], backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8' } } } }
+      });
+    }
+
+    function renderPosCatalog() {
+      const search = document.getElementById("posSearch").value.toLowerCase();
+      const grid = document.getElementById("posCatalogGrid");
+      const curr = storeState.settings.currency;
+      const categories = ["All", ...new Set(storeState.inventory.map(i => i.category))];
+
+      document.getElementById("posCategoryFilters").innerHTML = categories.map(c => `
+        <button onclick="setPosCategory('${c}')" class="px-2.5 py-1 rounded-full text-[11px] whitespace-nowrap transition ${activePosCategory === c ? 'bg-emerald-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-400 hover:text-slate-200'}">${c}</button>
+      `).join('');
+
+      const filtered = storeState.inventory.filter(i => (activePosCategory === "All" || i.category === activePosCategory) && (i.name.toLowerCase().includes(search) || i.category.toLowerCase().includes(search)));
+
+      grid.innerHTML = filtered.map(item => `
+        <div class="bg-slate-800/40 border border-slate-700/60 rounded-xl p-3 flex flex-col justify-between space-y-2">
+          <div>
+            <div class="flex justify-between items-start"><h4 class="font-bold text-xs text-slate-100">${item.name}</h4><span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">${item.category}</span></div>
+            <p class="text-[11px] text-slate-400 mt-1">Stock: <span class="font-semibold text-slate-200">${item.stock} pcs</span></p>
+          </div>
+          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700/50">
+            <button onclick="addToCart('${item.id}', 'piece')" class="p-2 bg-slate-900 hover:bg-emerald-600/20 hover:border-emerald-500 border border-slate-700 rounded-lg text-left transition"><div class="text-[10px] text-slate-400">Single Piece</div><div class="font-bold text-xs text-emerald-400">${curr}${item.piecePrice}</div></button>
+            <button onclick="addToCart('${item.id}', 'bundle')" class="p-2 bg-slate-900 hover:bg-emerald-600/20 hover:border-emerald-500 border border-slate-700 rounded-lg text-left transition"><div class="text-[10px] text-slate-400">Bundle (${item.bundleSize} pcs)</div><div class="font-bold text-xs text-emerald-400">${curr}${item.bundlePrice}</div></button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function setPosCategory(cat) { activePosCategory = cat; renderPosCatalog(); }
+
+    function addToCart(productId, unitType) {
+      const product = storeState.inventory.find(i => i.id === productId);
+      if (!product) return;
+      const existing = cart.find(c => c.productId === productId && c.unitType === unitType);
+      if (existing) existing.qty++;
+      else {
+        const price = unitType === 'bundle' ? product.bundlePrice : product.piecePrice;
+        const cogsPerUnit = unitType === 'bundle' ? (product.costPrice * product.bundleSize) : product.costPrice;
+        cart.push({ productId: product.id, name: product.name, category: product.category, unitType: unitType, unitPrice: price, cogsPerUnit: cogsPerUnit, qty: 1 });
+      }
+      renderCart();
+    }
+
+    function updateCartQty(index, delta) {
+      cart[index].qty += delta;
+      if (cart[index].qty <= 0) cart.splice(index, 1);
+      renderCart();
+    }
+
+    function clearCart() { cart = []; renderCart(); }
+
+    function renderCart() {
+      const container = document.getElementById("posCartItems");
+      const curr = storeState.settings.currency;
+      if (cart.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 text-center py-8">Cart is empty. Tap items on the left to add.</p>`;
+        document.getElementById("btnCheckout").disabled = true;
+        document.getElementById("posCartTotal").innerText = `${curr}0.00`;
+        document.getElementById("posCartCogs").innerText = `${curr}0.00`;
+        document.getElementById("posCartProfit").innerText = `${curr}0.00`;
+        document.getElementById("posCartCount").innerText = "0";
+        return;
+      }
+      let totalSales = 0, totalCogs = 0, totalItemsCount = 0;
+      container.innerHTML = cart.map((item, idx) => {
+        const subtotal = item.unitPrice * item.qty;
+        totalSales += subtotal; totalCogs += (item.cogsPerUnit * item.qty); totalItemsCount += item.qty;
+        return `<div class="py-2 flex items-center justify-between"><div><h5 class="text-xs font-semibold text-slate-200">${item.name}</h5><p class="text-[10px] text-slate-400 capitalize">${item.unitType} @ ${curr}${item.unitPrice}</p></div><div class="flex items-center gap-3"><div class="flex items-center bg-slate-900 rounded border border-slate-700"><button onclick="updateCartQty(${idx}, -1)" class="px-2 py-0.5 text-slate-400">-</button><span class="px-2 text-xs font-bold text-slate-200">${item.qty}</span><button onclick="updateCartQty(${idx}, 1)" class="px-2 py-0.5 text-slate-400">+</button></div><span class="text-xs font-bold text-emerald-400 w-16 text-right">${curr}${subtotal.toLocaleString()}</span></div></div>`;
+      }).join('');
+      document.getElementById("posCartTotal").innerText = `${curr}${totalSales.toLocaleString()}`;
+      document.getElementById("posCartCogs").innerText = `${curr}${totalCogs.toLocaleString()}`;
+      document.getElementById("posCartProfit").innerText = `${curr}${(totalSales - totalCogs).toLocaleString()}`;
+      document.getElementById("posCartCount").innerText = totalItemsCount.toString();
+      document.getElementById("btnCheckout").disabled = false;
+    }
+
+    function checkoutCart() {
+      if (cart.length === 0) return;
+      let totalSales = 0, totalCogs = 0;
+      const formattedItems = cart.map(item => {
+        const product = storeState.inventory.find(p => p.id === item.productId);
+        if (product) product.stock = Math.max(0, product.stock - (item.unitType === 'bundle' ? (item.qty * product.bundleSize) : item.qty));
+        totalSales += (item.unitPrice * item.qty);
+        totalCogs += (item.cogsPerUnit * item.qty);
+        return { productId: item.productId, name: item.name, category: item.category, unitType: item.unitType, qty: item.qty, subtotal: item.unitPrice * item.qty };
+      });
+      storeState.sales.unshift({ id: "TX-" + Date.now().toString().slice(-6), timestamp: new Date().toISOString(), items: formattedItems, totalAmount: totalSales, totalCogs: totalCogs, netProfit: totalSales - totalCogs });
+      saveCurrentAccountData();
+      clearCart();
+      renderPosCatalog();
+      alert("Sale successfully completed and saved to your account vault!");
+    }
+
+    function renderInventoryTable() {
+      const tbody = document.getElementById("inventoryTableBody");
+      const curr = storeState.settings.currency;
+      tbody.innerHTML = storeState.inventory.map(item => `
+        <tr><td class="p-3 font-semibold text-slate-100">${item.name}</td><td class="p-3 text-slate-400">${item.category}</td><td class="p-3">${curr}${item.costPrice}</td><td class="p-3 text-emerald-400">${curr}${item.piecePrice}</td><td class="p-3">${item.bundleSize} pcs</td><td class="p-3 text-emerald-400">${curr}${item.bundlePrice}</td><td class="p-3 font-bold ${item.stock < 10 ? 'text-red-400' : 'text-slate-200'}">${item.stock}</td><td class="p-3 text-right"><button onclick="openProductModal('${item.id}')" class="p-1 text-slate-400"><i data-lucide="edit-3" class="w-4 h-4"></i></button><button onclick="deleteProduct('${item.id}')" class="p-1 text-slate-400 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td></tr>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function openProductModal(id = null) {
+      document.getElementById("productForm").reset();
+      document.getElementById("prodId").value = "";
+      if (id) {
+        const item = storeState.inventory.find(i => i.id === id);
+        if (item) {
+          document.getElementById("prodId").value = item.id;
+          document.getElementById("prodName").value = item.name;
+          document.getElementById("prodCategory").value = item.category;
+          document.getElementById("prodStock").value = item.stock;
+          document.getElementById("prodCostPrice").value = item.costPrice;
+          document.getElementById("prodPiecePrice").value = item.piecePrice;
+          document.getElementById("prodBundleSize").value = item.bundleSize;
+          document.getElementById("prodBundlePrice").value = item.bundlePrice;
+        }
+      }
+      document.getElementById("productModal").classList.remove("hidden");
+      document.getElementById("productModal").classList.add("flex");
+    }
+    function closeProductModal() { document.getElementById("productModal").classList.add("hidden"); document.getElementById("productModal").classList.remove("flex"); }
+
+    function handleProductSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById("prodId").value || "p_" + Date.now();
+      const newProd = { id, name: document.getElementById("prodName").value, category: document.getElementById("prodCategory").value, stock: parseInt(document.getElementById("prodStock").value), costPrice: parseFloat(document.getElementById("prodCostPrice").value), piecePrice: parseFloat(document.getElementById("prodPiecePrice").value), bundleSize: parseInt(document.getElementById("prodBundleSize").value), bundlePrice: parseFloat(document.getElementById("prodBundlePrice").value) };
+      const idx = storeState.inventory.findIndex(i => i.id === id);
+      if (idx >= 0) storeState.inventory[idx] = newProd; else storeState.inventory.push(newProd);
+      saveCurrentAccountData();
+      closeProductModal();
+      renderInventoryTable();
+    }
+
+    function deleteProduct(id) {
+      if (confirm("Delete product?")) { storeState.inventory = storeState.inventory.filter(i => i.id !== id); saveCurrentAccountData(); renderInventoryTable(); }
+    }
+
+    function openExpenseModal() { document.getElementById("expenseModal").classList.remove("hidden"); document.getElementById("expenseModal").classList.add("flex"); }
+    function closeExpenseModal() { document.getElementById("expenseModal").classList.add("hidden"); document.getElementById("expenseModal").classList.remove("flex"); }
+
+    function handleExpenseSubmit(e) {
+      e.preventDefault();
+      storeState.expenses.unshift({ id: "EXP-" + Date.now(), timestamp: new Date().toISOString(), description: document.getElementById("expDesc").value, amount: parseFloat(document.getElementById("expAmount").value) });
+      saveCurrentAccountData();
+      closeExpenseModal();
+      renderDashboard();
+    }
+
+    function renderSalesHistory() {
+      const tbody = document.getElementById("historyTableBody");
+      const tfoot = document.getElementById("historyTableFoot");
+      const curr = storeState.settings.currency;
+
+      tbody.innerHTML = storeState.sales.map(s => `
+        <tr><td class="p-3 font-mono font-bold text-slate-300">${s.id}</td><td class="p-3 text-slate-400">${new Date(s.timestamp).toLocaleString()}</td><td class="p-3">${s.items.map(i => `${i.name} (${i.qty}${i.unitType === 'bundle' ? 'b' : 'p'})`).join(', ')}</td><td class="p-3 font-semibold text-slate-100">${curr}${s.totalAmount.toLocaleString()}</td><td class="p-3 text-slate-400">${curr}${s.totalCogs.toLocaleString()}</td><td class="p-3 font-semibold text-emerald-400">${curr}${s.netProfit.toLocaleString()}</td></tr>
+      `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-500">No transaction logs available.</td></tr>`;
+
+      const grandSales = storeState.sales.reduce((sum, s) => sum + s.totalAmount, 0);
+      const grandCogs = storeState.sales.reduce((sum, s) => sum + s.totalCogs, 0);
+      const grandProfit = storeState.sales.reduce((sum, s) => sum + s.netProfit, 0);
+
+      tfoot.innerHTML = `
+        <tr>
+          <td colspan="3" class="p-3 text-right uppercase tracking-wider text-slate-400">Grand Total Sums:</td>
+          <td class="p-3 text-slate-100 font-bold">${curr}${grandSales.toLocaleString()}</td>
+          <td class="p-3 text-slate-300 font-bold">${curr}${grandCogs.toLocaleString()}</td>
+          <td class="p-3 text-emerald-400 font-bold">${curr}${grandProfit.toLocaleString()}</td>
+        </tr>
+      `;
+    }
+
+    function exportSalesCSV() {
+      const headers = ["Tx ID", "Timestamp", "Items", "Total Sales", "Total COGS", "Net Profit"];
+      const rows = storeState.sales.map(s => [s.id, s.timestamp, `"${s.items.map(i => i.name).join(', ')}"`, s.totalAmount, s.totalCogs, s.netProfit]);
+      const csv = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+      const link = document.createElement("a"); link.setAttribute("href", encodeURI(csv)); link.setAttribute("download", `voltyfy_audit_${Date.now()}.csv`);
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+
+    function renderAchievements() {
+      const totalRev = storeState.sales.reduce((sum, s) => sum + s.totalAmount, 0);
+      const totalCount = storeState.sales.length;
+      const milestones = [
+        { name: "First Sale Completed", desc: "Recorded first transaction", achieved: totalCount >= 1, icon: "zap" },
+        { name: "High Volume Trader", desc: "Recorded 10+ transactions", achieved: totalCount >= 10, icon: "trending-up" },
+        { name: "100k Revenue Club", desc: "Earned ₦100,000+ total revenue", achieved: totalRev >= 100000, icon: "crown" }
+      ];
+      document.getElementById("achievementsGrid").innerHTML = milestones.map(m => `
+        <div class="bg-slate-900 border ${m.achieved ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-slate-800'} rounded-xl p-4 flex items-center gap-3">
+          <div class="p-3 rounded-lg ${m.achieved ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-600'}"><i data-lucide="${m.icon}" class="w-6 h-6"></i></div>
+          <div><h4 class="font-bold text-xs ${m.achieved ? 'text-slate-100' : 'text-slate-500'}">${m.name}</h4><p class="text-[10px] text-slate-500">${m.desc}</p></div>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function loadProfileSettings() {
+      document.getElementById("cfgStoreName").value = storeState.settings.storeName;
+      document.getElementById("cfgCurrency").value = storeState.settings.currency;
+    }
+
+    function saveStoreSettings() {
+      storeState.settings.storeName = document.getElementById("cfgStoreName").value;
+      storeState.settings.currency = document.getElementById("cfgCurrency").value;
+      saveCurrentAccountData();
+      document.getElementById("headerStoreName").innerText = storeState.settings.storeName;
+      alert("Settings saved!");
+    }
+
+    function togglePasswordVisibility() {
+      const input = document.getElementById("authPassword");
+      const eye = document.getElementById("eyeIcon");
+      if (input.type === "password") { input.type = "text"; eye.setAttribute("data-lucide", "eye-off"); }
+      else { input.type = "password"; eye.setAttribute("data-lucide", "eye"); }
+      lucide.createIcons();
+    }
+  </script>
+
+  <!-- Service Worker Registration for PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(() => console.log('Voltyfy PWA Service Worker Registered Successfully'))
+          .catch((err) => console.log('Service Worker Registration Failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
