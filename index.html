@@ -912,5 +912,35 @@
       });
     }
   </script>
+  <!-- Add your Firebase logic right before the closing body tag -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "voltyfy-58594.firebaseapp.com",
+    projectId: "voltyfy-58594",
+    storageBucket: "voltyfy-58594.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  async function loadProducts() {
+      const querySnapshot = await getDocs(collection(db, "products"));
+      querySnapshot.forEach((doc) => {
+          console.log(`${doc.id} => `, doc.data());
+      });
+  }
+
+  loadProducts();
+</script>
 </body>
 </html>
+</body>
+</ht
