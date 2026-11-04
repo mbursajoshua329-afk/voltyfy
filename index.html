@@ -913,6 +913,9 @@
     }
   </script>
   <!-- Add your Firebase logic right before the closing body tag -->
+<div id="product-list" class="space-y-2 mt-4">
+      <!-- Products will load here dynamically -->
+    </div>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -932,13 +935,35 @@
   const db = getFirestore(app);
 
   async function loadProducts() {
-      const querySnapshot = await getDocs(collection(db, "products"));
-      querySnapshot.forEach((doc) => {
-          console.log(`${doc.id} => `, doc.data());
-      });
-  }
+        const productContainer = document.getElementById("product-list");
+        if (!productContainer) return;
+        
+        productContainer.innerHTML = ""; 
+        
+        try {
+            const querySnapshot = await getDocs(collection(db, "products"));
+            
+            querySnapshot.forEach((doc) => {
+                const product = doc.data();
+                
+                const itemCard = document.createElement("div");
+                itemCard.className = "bg-slate-800 p-4 rounded-lg flex justify-between items-center border border-slate-700 shadow-sm";
+                itemCard.innerHTML = `
+                    <div>
+                        <h4 class="font-bold text-white text-base">${product.name}</h4>
+                        <p class="text-sm text-slate-400 mt-1">Price: ₦${product.price || 0}</p>
+                    </div>
+                `;
+                
+                productContainer.appendChild(itemCard);
+            });
+        } catch (error) {
+            console.error("Error fetching products: ", error);
+            productContainer.innerHTML = `<p class="text-red-400 text-sm">Failed to load products.</p>`;
+        }
+    }
 
-  loadProducts();
+    loadProducts();
 </script>
 </body>
 </html>
