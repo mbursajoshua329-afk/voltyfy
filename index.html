@@ -913,7 +913,35 @@
     }
   </script>
   <!-- Add your Firebase logic right before the closing body tag -->
-<div class="bg-slate-800 p-4 rounded-lg border border-slate-700 mb-4 max-w-md">
+<!-- Auth Container -->
+<div id="auth-container" class="bg-slate-800 p-4 rounded-lg border border-slate-700 mb-4 max-w-md">
+    <div id="auth-form-wrapper">
+        <h3 id="auth-title" class="font-bold text-white mb-3 text-lg">Sign In to Voltyfy</h3>
+        <form id="auth-form" class="space-y-3">
+            <input type="email" id="auth-email" placeholder="Email Address" required 
+                   class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm focus:outline-none focus:border-emerald-500">
+            <input type="password" id="auth-password" placeholder="Password (min. 6 characters)" required 
+                   class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm focus:outline-none focus:border-emerald-500">
+            <button type="submit" id="auth-btn"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded text-sm transition">
+                Sign In
+            </button>
+        </form>
+        <p class="text-xs text-slate-400 mt-3 text-center">
+            <span id="toggle-text">Need an account?</span> 
+            <button type="button" id="toggle-auth-mode" class="text-emerald-400 underline ml-1">Sign Up</button>
+        </p>
+    </div>
+
+    <!-- User Profile Bar (Hidden when logged out) -->
+    <div id="user-profile" class="hidden flex justify-between items-center">
+        <p class="text-xs text-slate-300">Signed in as: <span id="user-email-display" class="font-semibold text-emerald-400"></span></p>
+        <button id="logout-btn" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1.5 rounded transition">
+            Sign Out
+        </button>
+    </div>
+</div>
+  <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 mb-4 max-w-md">
     <h3 class="font-bold text-white mb-3 text-lg">Add New Inventory Item</h3>
     <form id="add-product-form" class="space-y-3">
         <input type="text" id="product-name" placeholder="Product Name" required 
@@ -932,6 +960,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
   // Your web app's Firebase configuration
   const firebaseConfig = {
@@ -946,6 +975,74 @@
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  // Initialize Auth
+    const auth = getAuth(app);
+
+    let isSignUp = false;
+    const authForm = document.getElementById("auth-form");
+    const authFormWrapper = document.getElementById("auth-form-wrapper");
+    const userProfile = document.getElementById("user-profile");
+    const userEmailDisplay = document.getElementById("user-email-display");
+    const authTitle = document.getElementById("auth-title");
+    const authBtn = document.getElementById("auth-btn");
+    const toggleAuthBtn = document.getElementById("toggle-auth-mode");
+    const toggleText = document.getElementById("toggle-text");
+    const logoutBtn = document.getElementById("logout-btn");
+
+    // Toggle between Sign In and Sign Up modes
+    if (toggleAuthBtn) {
+        toggleAuthBtn.addEventListener("click", () => {
+            isSignUp = !isSignUp;
+            authTitle.textContent = isSignUp ? "Create Voltyfy Account" : "Sign In to Voltyfy";
+            authBtn.textContent = isSignUp ? "Register Account" : "Sign In";
+            toggleText.textContent = isSignUp ? "Already have an account?" : "Need an account?";
+            toggleAuthBtn.textContent = isSignUp ? "Sign In" : "Sign Up";
+        });
+    }
+
+    // Handle Login / Registration
+    if (authForm) {
+        authForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("auth-email").value;
+            const password = document.getElementById("auth-password").value;
+
+            try {
+                if (isSignUp) {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    alert("Account created successfully!");
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                }
+                authForm.reset();
+            } catch (error) {
+                console.error("Auth error:", error.message);
+                alert("Auth error: " + error.message);
+            }
+        });
+    }
+
+    // Handle Sign Out
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", async () => {
+            await signOut(auth);
+            alert("Signed out successfully!");
+        });
+    }
+
+    // Monitor Auth State Changes
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            authFormWrapper.classList.add("hidden");
+            userProfile.classList.remove("hidden");
+            userEmailDisplay.textContent = user.email;
+            loadProducts();
+        } else {
+            authFormWrapper.classList.remove("hidden");
+            userProfile.classList.add("hidden");
+            userEmailDisplay.textContent = "";
+        }
+    });
 
   async function loadProducts() {
         const productContainer = document.getElementById("product-list");
@@ -1002,4 +1099,4 @@
     }
 </script>
 </body>
-</html>
+</html>nb 
