@@ -924,10 +924,10 @@
       
       const productName = document.getElementById('product-name').value;
       const productPrice = document.getElementById('product-price').value;
-      const currentUser = auth.currentUser;
+      const currentUser = window.auth ? window.auth.currentUser : null;
       
       try {
-        await addDoc(collection(db, "products"), {
+        await addDoc(collection(window.db, "products"), {
           name: productName,
           price: Number(productPrice),
           userId: currentUser ? currentUser.uid : "anonymous",
@@ -943,6 +943,20 @@
     });
   }
 </script>
+<!-- Add New Inventory Item Form -->
+<div class="bg-slate-800 p-4 rounded-lg border border-slate-700 mb-4">
+  <h3 class="font-bold text-white mb-3 text-lg">Add New Inventory Item</h3>
+  <form id="product-form" class="space-y-3">
+    <input type="text" id="product-name" placeholder="Product Name" required
+           class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
+    <input type="number" id="product-price" placeholder="Price (₦)" required
+           class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
+    <button type="submit" id="save-product-btn"
+           class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 rounded transition">
+      Save Product to Database
+    </button>
+  </form>
+</div>
 <div id="auth-container" class="bg-slate-800 p-4 rounded-lg border border-slate-700 mb-4">
   <div id="auth-container" class="bg-slate-800 p-4 rounded-lg border border-slate-700 mb-4">
   <div id="auth-form-wrapper">
